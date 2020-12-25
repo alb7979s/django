@@ -1701,7 +1701,7 @@ path('list/' ArticleListView.as_view(), name='list'),
 
 - Mixin: 다중상속 받아서 DetailView 안에서도 form을 사용하게끔(addon 느낌? 이래)
 - python manage.py startapp commentApp
-- pinterest - settings.py에 APP 추가
+- config - settings.py에 APP 추가, urls.py에 path 추가
 
 ```python
 #commentApp - models.py
@@ -1715,6 +1715,7 @@ class Comment(models.Model):
 - article, writer 서버단에서 확인할거
 - content 입력 받을거
 - created_at은 자동으로 생성될거
+- model 만들었으면 migration 작업 해주기(이걸 forms.py까지 완성하고 해야는지 여기서 해도 되는지 해보기)
 
 ```python
 #commentApp - forms.py 생성
@@ -1780,13 +1781,13 @@ urlpatterns = [
 
 - 이제 만든 레이아웃을 게시글 아래쪽으로 배치할거임
 
-- articleApp-templates-articleApp-detail.html 가서 맨 아래쪽 나오게 {% include 'commentApp/html' with article=target_article %} 이래주면 create안에서 article이라는 변수 사용 가능하게됨
+- articleApp-templates-articleApp-detail.html 가서 맨 아래쪽 나오게 {% include 'commentApp/create.html' with article=target_article %} 이래주면 create안에서 article이라는 변수 사용 가능하게됨
 
 - create.html \<input type="hidden" name="article_pk" value="{{ <u>article.pk</u> }}"\>로 수정
-- create.html 맨 위 {% extends 'base.html' %} 지워도 됨, 두번 extends하게 되는거래
-- 이러고 테스트 해보면 form때문에 에러뜸 이제 mixin사용해줘야함
+- ~~create.html 맨 위 {% extends 'base.html' %} 지워도 됨, 두번 extends하게 되는거래~~
+- 이러고 테스트 해보면 form 문제 있음 이제 mixin사용해줘야함
 - articleApp - views.py - ArticleDetailView()에서 FormMixin 인자로 추가해줘서 다중상속 시켜줌, 내용에 form_class = CommentCreationForm 추가해줌
-- 이러고 테스트 해보면 잘 작동함
+- 이러고 articles/detail/ 테스트 해보면 잘 작동함
 - 근데 이대로 comment 달 순 없음 원하는대로 작동시키려면 내용 더 추가
 
 ```python
@@ -1893,15 +1894,15 @@ def comment_ownership_required(func):
 ##### 모바일 디버깅, 반응형 레이아웃
 
 - python manage.py runserver 0.0.0.0:8000 으로 실행하면 컴퓨터 말고도 다른 곳에서 ip주소를 기반으로 서버에 접속할 수 있는 포트가 열림
-- 모바일로 http://0.0.0.0:8000/ 접속해보면 호스트 허용되지 않았다고 에러뜸
-- pinterest - settings.py - ALLOWED_HOSTS = ['*'] 이래주면 모든 호스트 허용됨
+- 모바일로 ip주소:8000/accounts/login 접속해보면 호스트 허용되지 않았다고 에러뜸
+- config - settings.py - ALLOWED_HOSTS = ['*'] 이래주면 모든 호스트 허용됨
 
 - 이러고 모바일로 들어가보면 모바일 최적화 안되어있음
 - 이걸 실제 디바이스 너비에 맞춰서 리사이즈 해주는 태그를 html안에 넣을거임
 
 ```html
 <!-- templates - head.html - <head> - <meta> 아랫줄에 추가-->
-<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 ```
 
 - shrink~: firefox에 맞추는 셋팅
@@ -2000,8 +2001,8 @@ def get_context_data(self, **kwargs):	#실질적으로 어떤 게시물 가져�
 
 - 이러고 projects/detail 테스트 해보면 만든 게시글 잘 나와있음
 - 이번엔 accounts/detail 아래쪽에도 나오게끔 똑같이 적용
-- accountApp - views.py에 projectApp - views.py - ProjectDetailView() 에 한거처럼 똑같이(바로 위위 코드)
-- accountAoo - detail.html 가서 \<div\> 똑같이(바로 위 코드)
+- accountApp - views.py에 projectApp - views.py - ProjectDetailView() 에 한 형식대로(바로 위위 코드)
+- accountApp - detail.html 가서 \<div\> 똑같이(바로 위 코드)
 - 이러고 accounts/detail 테스트 해보면 내가 쓴글들 잘 나옴
 
 ##### RedirectView를 통한 subscriptionApp(구독 기능) 시작
@@ -2094,3 +2095,156 @@ get_context_data(object_list=object_list, subscription=subscription, **kwargs)
 ```
 
 - 이러고 테스트 해보기(projects/detail)
+
+##### field lookup을 사용한 구독 페이지 구현
+
+![img](https://blog.kakaocdn.net/dn/WLeDQ/btqRlIa2xum/z180YAYm2Hl86I0Cw8wWC1/img.png)
+
+- 목적은 좀 더 복잡한 DB 쿼리를 사용자가 구현할 수 있도록 만들어 주는것
+- 좀 더 자세한 내용은 [여기](https://docs.djangoproject.com/en/3.1/ref/models/querysets/#field-lookups)
+
+```python
+#subscriptionApp - views.py 에 추가
+@method_decorator(login_required, 'get')
+class SubscriptionListView(ListView):
+    model = Article
+    context_object_name = 'article_list'
+    template_name = 'subscriptionApp/list.html'
+    paginate_by = 5
+    
+    def get_queryset(self):
+        projects = Subscription.objects.filter(user=self.request.user).vlaues_list('project')
+        article_list = Article.objects.filter(project__in=projects)
+        return article_list
+```
+
+- values_list => 값들을 list화 시킴
+
+```html
+<!-- subscriptionApp - templates - subscriptionApp 폴더 만들고 list.html 생성-->
+{% extends 'base.html' %}
+{% block content %}
+
+	<div>
+        {% include 'snippets/list_fragment.html' with article_list=article_list %}
+	</div>
+{% endblock %}
+```
+
+- urls.py에 path('list/' SubscriptionListView.as_view(), name='list'), 추가
+
+```html
+<!-- templates - header.html 에서 3번째 Subscription 탭 만들도록 추가해줌 -->
+<a href="{% url 'subscriptionApp:list' %}" class="pinterest_header_nav">
+	<span>Subscription</span>
+</a>
+```
+
+- 하고 subscription/list 테스트 해보면 구독 여부에 따라 잘 나옴
+
+##### WYSIWYG(What You See Is What You Get) 적용
+
+- 게시판 기능 중 하나
+- [미디엄에디터](https://github.com/yabwe/medium-editor) 적용할거, 여기가서 readme의 demo 부분 링크타보면 어떤식으로 가능한지 볼 수 있음
+
+```python
+#articleApp - forms.py - ArticleCreationForm() 내부에 추가
+#from django import forms
+content = forms.CharField(widget=forms.Textarea(attrs={'class': 'editable'}))
+```
+
+```html
+<!-- articles - create.html - block content 내부 맨 위에 추가 -->
+<!-- 사이트 readme에서 찾아서 복붙한거 -->
+<script src="//cdn.jsdelivr.net/npm/medium-editor@5.23.2/dist/js/medium-editor.min.js"></script>
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/medium-editor@5.23.2/dist/css/medium-editor.min.css" type="text/css" media="screen" charset="utf-8">
+
+<!-- 이 친구는 endblock 위에 추가 -->
+<script>var editor = new MediumEditor('.editable');</script>
+```
+
+- 이러고 create 테스트하면 글자 바꿀 수 있는데 엔터 여러번 쳐보면 박스가 안따라옴 이거 처리해주려면
+
+- articleApp - forms.py - ArticleCreationForm() attrs={'class': 'editable text-left', 'style': 'height: auto;'}))
+
+- 컨텐트 필드가 만들어 질때 클래스랑 스타일을 여기서 미리 결정해준다 생각해주면 됨
+- 이러고 테스트 해보면 잘 됨, 근데 여기서 글 써보면 글에 태그가 엄청 많이 나타남, 컨텐트를 그대로 뿌려줘서 그럼 이거 고쳐줄거
+
+```html
+<!-- articleApp-detail.html의 {{ target_article.content }} 부분 수정 -->
+<div class="text-left">					<!-- a => div로 -->
+    {{ target_article.content | safe }}
+</div>
+```
+
+- 이러고 테스트 해보면 잘되는데 update 눌러보면 잘 안나옴 update뷰도 적용해줘야함
+
+- update.html 가서 바로 위위 코드처럼 추가해주고
+
+```python
+#articleApp - forms.py - ArticleCreationForm() 내부에 추가
+project = forms.ModelChoiceField(queryset=Project.objects.all(), required=False)
+```
+
+- required=False 해서 선택 없이도 제출 가능
+
+##### 정리 및 다듬기
+
+- 게시글 쓸 때 프로젝트 고르는거 이름으로 나타나도록
+
+```python
+#projectApp - models.py - Project()에 추가
+def __str__(self):
+    #따옴표 앞에 f 붙이면 이 안에 직접 변수 출력 가능
+    return f'{self.pk}: {self.title}'	
+```
+
+- 이러고 테스트 해보면 프로젝트 선택시 몇번 글의 이름 으로 나옴
+
+```python
+#projectApp - views.py - get_context_data() 부분 수정
+#if user 아닌경우 문제 생겨서 아닌경우도 처리해줘야함, 아래 내용 if아래 추가
+else: subscription = None
+```
+
+- accountApp - hello_world.py 이거 과거의 잔재들 제거할거
+- pinterest 우클릭 Find in path 해서 hello치고 in project 누르면 hello 나온거 다 나옴 필요없는 부분들 지우기 (<u>주의! migrations 파일은 지우면 안됨</u>)
+
+- LOGIN_REDIRECT_URL 이 부분은 reverse_lazy('home')으로 바꿔줌
+
+- 이번엔 homepage 설정할거
+
+```python
+#config - urls.py - urlpatterns에 추가
+path('', ArticleListView.as_view(), name='home'),
+```
+
+- 이제 그냥 주소만 쳐도  들어가짐
+- 이번엔 edit부분 change info, quit 부분 좀 더 이쁘게 바꿔줄거
+
+- [아이콘](https://material.io/resources/icons/?style=baseline) 이거 이용할거
+
+- 아이콘들 이름들이 나와있는데 이름만 넣고 클래스만 바꿔주면 아이콘 적용 가능
+- [아이콘깃헙](https://github.com/google/material-design-icons) 여기 보면 사용법 나와있음
+- Using a font 부분 링크 복사해서
+
+```html
+<!-- templates - head.html - GOOGLE FONTS LINK 아래 추가 -->
+<!-- GOOGLE METERIAL ICONS -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Icons"
+      rel="stylesheet">
+```
+
+```html
+<!-- accountApp - detail.html edit 부분 추가 -->
+<a class="material-icons" style="box-shadow: 0 0 4px #ccc"; border-radius: 10rem; padding: .4rem;
+```
+
+- box-shadow: (x, y, 크기, 색)
+
+```html
+<!-- 위에거 복사해서 Chang Info, Quit 부분에 복붙하고 사용하고픈 이름 사용-->
+<!-- ex) Chang Info => setting, Quit => cancel -->
+<!-- cancel 부분 색 그림자 붉은색으로 #fcc -->
+```
+
