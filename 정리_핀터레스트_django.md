@@ -2165,14 +2165,14 @@ content = forms.CharField(widget=forms.Textarea(attrs={'class': 'editable'}))
 
 - 이러고 create 테스트하면 글자 바꿀 수 있는데 엔터 여러번 쳐보면 박스가 안따라옴 이거 처리해주려면
 
-- articleApp - forms.py - ArticleCreationForm() attrs={'class': 'editable text-left', 'style': 'height: auto;'}))
+- articleApp - forms.py - ArticleCreationForm() attrs={'class': 'editable text-left', 'style': 'height: auto;'}))  ==> class에 text-left 적용 안돼서 그냥 style에 text-align: left 추가해줌
 
 - 컨텐트 필드가 만들어 질때 클래스랑 스타일을 여기서 미리 결정해준다 생각해주면 됨
 - 이러고 테스트 해보면 잘 됨, 근데 여기서 글 써보면 글에 태그가 엄청 많이 나타남, 컨텐트를 그대로 뿌려줘서 그럼 이거 고쳐줄거
 
 ```html
 <!-- articleApp-detail.html의 {{ target_article.content }} 부분 수정 -->
-<div class="text-left">					<!-- a => div로 -->
+<div class="text-left">					<!-- p => div로 -->
     {{ target_article.content | safe }}
 </div>
 ```
@@ -2187,6 +2187,8 @@ project = forms.ModelChoiceField(queryset=Project.objects.all(), required=False)
 ```
 
 - required=False 해서 선택 없이도 제출 가능
+
+
 
 ##### 정리 및 다듬기
 
@@ -2207,11 +2209,17 @@ def __str__(self):
 else: subscription = None
 ```
 
+
+
+---
+
+이 아래 부분들~ 공부 다시해서(이해해서)  버그 수정 해야함
+
+
+
 - accountApp - hello_world.py 이거 과거의 잔재들 제거할거
 - pinterest 우클릭 Find in path 해서 hello치고 in project 누르면 hello 나온거 다 나옴 필요없는 부분들 지우기 (<u>주의! migrations 파일은 지우면 안됨</u>)
-
 - LOGIN_REDIRECT_URL 이 부분은 reverse_lazy('home')으로 바꿔줌
-
 - 이번엔 homepage 설정할거
 
 ```python
@@ -2247,4 +2255,12 @@ path('', ArticleListView.as_view(), name='home'),
 <!-- ex) Chang Info => setting, Quit => cancel -->
 <!-- cancel 부분 색 그림자 붉은색으로 #fcc -->
 ```
+
+---
+
+accounts부분 문제 있는듯
+
+++비번 변경 안됨
+
+++quit 삭제 안됨
 
