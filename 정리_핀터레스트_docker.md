@@ -127,9 +127,10 @@ docker container ls 쳐보면 구동되고 있는 컨테이너 (portainer) 나�
    - docker hub 가서 python 치고 들어가서 Tags 탭 누르면 어떤 버젼 (사용 할 수)있는지 볼 수 있음
 
 3. 이미지 생성
+
    -  포테이너 들어가서 Images - Build a new image - Upload - select file해서 Dockerfile 넣어줌 (이름 정해줌 django_test_image:1)
-   - 하고 Build image 하면 됨(처음엔 시간 좀 걸림)
-   - 다시 포테이너 Images탭 들어가면 두개의 이미지 생겨있음(만든거랑 python)
+   -  하고 Build image 하면 됨(처음엔 시간 좀 걸림)
+   -  다시 포테이너 Images탭 들어가면 두개의 이미지 생겨있음(만든거랑 python)
 
 4. 컨테이너 실행
 
@@ -244,3 +245,276 @@ http{
 ##### ![img](https://blog.kakaocdn.net/dn/buJ5OI/btqRAkAUMHB/0ou2B5WI0rCk0RypX3d1lk/img.png)
 
 - 그래서 앞으로 이런식으로 만들거
+
+##### Docker Volume 생성 및 Container 적용
+
+- 포테이너 - containers 다 지워줌(포테이너 빼고)
+- volumes 들어가서 add volume누르고 static이란 이름으로 만들어줌
+- media 라는 볼륨도 하나 만들어줌
+- containers 가서 add container누르고 이름django_container_guricorn 으로, Image는 django_test_image:3, network port안건드려도 되고, 밑에 network에서 nginx-django 선택하고, vloumes에서 map additional volume 두개 추가
+- 그 볼륨에서 container: /home/pinterest/staticfiles/ 
+- volume: static - local
+- container: /home/pinterest/media/
+- volume: media - local
+- 이러고 deployment 해주면 됨
+- 컨테이너에서 Quick actions 제일 왼쪽 누르면 로그 확인할 수 있음
+- nginx 컨테이너 만들어줌, 이미지 nginx:latest, host port 80, container port 80, network는 nginx-django
+- volumes가서 세개 추가해주고 container: /data/static/ , volume: static - local
+- container: /data/media, volume: media - local
+- container: (Bind누르고) /etc/nginx/nginx.conf, host: /home/django_course/nginx.conf
+- deploy하기 전에 고쳐줘야 할게 있어!
+
+```
+#nginx.conf - server{} 내부에 추가
+
+include mime.types;
+
+location /static/ {
+	alias /data/static/;
+}
+location /media/ {
+	alias /data/media/;
+}
+```
+
+- 파일질라 이용해서 수정한 파일 올려줌.
+- 그러고나서 deploy 하면 됨
+- 빌린 IP로 들어가보면 잘~~~ 나옴 개굳
+
+##### Maria DB 컨테이너를 이용한 DB 분리
+
+- docker hub에서 mariadb 치면 나옴 거기서 시작법대로 해주면 됨
+- 포테이너 들어가서 Add container로 mariadb 하고 Image에 mariadb:10.5
+- 참고로 Image 이름에 :이거 뒤에는 태그값 넣는거 안적으면 그냥 최신으로 가져옴(권장하진 않는대)
+- Env에서 MYSQL_ROOT_PASSWORD, password 넣어주고 deployment해보면 되는걸 볼 수 있다
+
+##### 개발/배포 환경 분리
+
+![img](https://blog.kakaocdn.net/dn/nRJlp/btqRI80SVTh/AOCgLCuEvtkLTXUuTVNou0/img.png)
+
+- 요런식으로(mariaDB아래 볼륨을 통해서 컨테이너 생애주기와 관련없이 데이터 유지되도록 하겠)
+- 파이참 켜서 config - settings.py 이 설정들 나눠줄거임
+- config에 settings라는 폴더 만들어주고, settings.py 이쪽으로 넘겨줌
+- settings 폴더 안에 local.py, deploy.py 추가(local은 컴퓨터 개발환경, deploy는 배포환경)
+- settings.py 이름을 base.py로 바꿔줌
+- base.py에서 같은건 냅두고 다른걸 빼낼거임
+- env관련 ~ ALLOWED_HOSTS부분 까지 잘라내서 local.py랑, deploy.py에 넣어줌
+- 둘 다 import os, environ랑 from .base import* 해줌
+- base.py에서  DATABASE 부분도 잘라서 두 곳에 넣어줌
+- local.py는 그대로 냅두면 되는데 deploy.py 에서는 바꿔줘야함
+- DEBUG = False로 바꿔주고
+- DB 주석부분 컨트롤 클릭 해보면 양식 나옴
+
+```python
+DATABASES ={
+	'default': {
+        'ENGINE': 'django.db.backends.mysql',	#mariaDB가 mysql에서 나온거라
+        'NAME': 'django',
+        'USER': 'django',
+        'PASSWORD': 'password123',
+        'HOST': 'mariadb',				
+        'PORT': '3306',							#mysql이 사용하는 포트가 3306임
+    }
+}
+```
+
+- 이러고 python manage.py runserver하면 에러남
+- 그 이유인 즉슨, settings.py 파일의 위치가 변했기 때문! 따라서 base.py - BASE_DIR에 .parent 추가해줌
+- 하지만 또 에러가 나는데 manage.py - main() 부분 pinterest.settings.local로 바꿔주면 잘 작동함
+
+##### Maria DB 컨테이너 설정 및 Django 연동
+
+- database로 해서 볼륨 하나 만들어 놓음
+
+- 포테이너에서 원래 있던 마리아DB 컨테이너 삭제해줌
+- 참고로 config - settings - deploy.py 에 있는 DB내용들이랑 맞춰서 적어줘야함
+- 이름 mariadb, Image: mariadb:10.5, Network: nginx-dajngo, Volumes: container: /var/lib/mysql(mariaDB 공식 문서 where to stor data 부분에 있는 경로), vloume: database-local
+- Env 4개 추가 (참고로 공식 문서에 Environment Variables라고 환경변수 어떤 이름으로 넣어줘야는지 나와있음) 
+- MYSQL_ROOT_PASSWORD, password123
+- MYSQL_DATABASE, django
+- MYSQL_USER, django
+- MYSQL_PASSWORD, password123
+- 이러고 deployment 해줌
+- 이번엔 django container와 연결
+- Dokerfile파일 열고 RUN echo "testing" 추가 (의미없음, 깃 수정했는데 그거 캐시 때문에 반영 안되는거 막으려고)
+- RUN ~migrate 지우고 밑에 CMD로 추가해줄거임
+- CMD에 넣어야하는 명령어가 두개가 됨. 이런 경우에는 다음처럼 바꿈
+- CMD ["bash", "-c", "python manage.py migrate --settings=pinterest.settings.deploy && gunicorn pinterest.wsgi --env DJANGO_SETTINGS_MODULE=pinterest.settings.deploy --bind 0.0.0.0:8000"] 이러면 되는데 manage.py 가면 위치가 로컬환경으로 되어있음 따라서 배포 환경으로 바꿔줘야함 --settings=pinterest.settings.deploy가 그 부분, 뒤에 gunicorn 부분은 [여기](https://docs.gunicorn.org/en/latest/run.html#django) 참고함
+- 추가로 RUN pip install gunicorn 아래에 RUN pip install mysqlclient 추가해줘야함
+- 포테이너 - 이미지 만들기 누르고 Dockerfile 넣어서 django_test_image:4 만들기
+- add container 해서 name:django_container_gunicorn, docker: django_test_image:4, network: nginx-django 해서 deployment 하면 됨
+- 접속 해보면 잘 돌아감 굿굿
+
+- 글 올리고 장고 컨테이너 없애고 다시 켜봐도 데이터 그대로 남아있음
+
+##### container의 한계, docker stack의 이해
+
+- 설정 계속 해줘야함, 컨테이너 꺼졌을때 문제
+
+![img](https://blog.kakaocdn.net/dn/bdiwkr/btqRGo36i5p/IbDrTBjPy6kM1uGFKftuNk/img.png)
+
+- 따라서 컨테이너별로 들어가는 모든 셋팅들을 하나의 파일로 만들어줄거(해놓으면 컨테이너 하나하나 일일이 셋팅할 필요 없어짐) 	=> Docker STACK 이라고함
+- 컨테이너 꺼졌을 경우 reboot 해줘야는디 누가해줘?
+
+![img](https://blog.kakaocdn.net/dn/b8KPgM/btqRAjPJMyC/7cwDnMNYtBKG6eFxugefhK/img.png)
+
+- 이렇게 서비스로 관리할거
+- 서비스는 만약 문제 생겨서 없어지면 자동으로 재부팅 시켜줌
+- 추가로 서비스 내에서 필요에 따라 컨테이너를 늘리거나 줄일수 있음(scale out 가능)
+
+##### docker swarm의 이해
+
+- 도커시스템을 포함하고 있는 가상환경을 노드라고 하는데, 이 노드가 여러개 있을 수 있음. 이 여러가지 노드를 하나의 서버처럼 묶어주는게 swarm
+
+![img](https://blog.kakaocdn.net/dn/cfTeof/btqRTR4Oyjl/SXLKKpzzG9moUovprDQoPK/img.png)
+
+- 이런식으로 클러스터링 가능
+
+![img](https://blog.kakaocdn.net/dn/pym23/btqRTSvTS1f/O4Y11c1MrPaC9vxrh3jv6K/img.png)
+
+- 필요한 컴퓨팅 파워에 따라 이렇게도 구성 가능(이런걸 container orchestration이라한대)
+
+##### stack을 위한 yml 파일 작성
+
+- portainer에서 container들 다 지워주고
+- docker swarm 모드 켜줘야함, 근데 portainer 지금버전에선 제공 안해줘서
+- 터미널로 해줘야함
+
+```
+ssh root@IP주소
+비밀번호
+
+docker swarm init
+```
+
+- 이러고 포테이너 들어가면 swarm, services이런거 생겨있음
+
+- 파이참 키고 루트 - docker-compose.yml 생성
+
+```python
+#docker-compose.yml
+version: "3.7"
+services: 
+    django:
+        image: django_test_image:3		
+        ports:
+            -8000:8000
+```
+
+- 이런식으로 쌓아나가면 됨
+- 포테이너 - Stacks 만들고 name:django_stack, docker-compose.yml 파일 업로드해서 deploy
+- 이러고 접속해보면 돌아감(장고만 돌려서 스태틱 파일은 안불러진 상태로)
+- portainer - swarm보면 어떻게 돌아가는지 알 수 있음, services에서 숫자 올려주면 컨테이너 늘려줄수도 있음
+
+##### 모든 컨테이너 yml 작성
+
+```python
+#docker-compose.yml
+version: "3.7"
+services: 
+    nginx:
+        image: nginx:1.19.5
+        networks:
+            -network
+        volumes:
+            - /home/django_course/nginx.conf:/etc/nginx/nginx.conf
+            - static-volume:/data/static
+            - media-volume:/data/media
+        ports:
+            - 80:80
+	django_container_gunicorn:
+        image: django_test_image:4
+		networks:
+            - network
+        volumes:
+			- static-volume:/home/pinterest/staticfiles
+            - media-volume:/home/pinterest/media
+	mariadb:
+        image: mariadb:10.5
+		networks:
+            - network
+        volumes:
+            - maria-database:/var/lib/mysql
+		environment:
+            MYSQL_ROOT_PASSWORD: password123
+            MYSQL_DATABASE: django
+            MYSQL_USER: django
+            MYSQL_PASSWORD: password123
+
+networks:
+    network:
+        
+volumes:
+    static-volume:
+	media-colume:
+	maria-database:
+        
+```
+
+- 이 파일을 기반으로 배포를 해보자~
+- portainer - stacks 가서 원래 있던거 지우고 container들도 지우고
+- stack 추가 누르고 name:DJ, .yml파일 업로드 해서 만들어줌
+- services가서 다 동작 되면 IP주소 치고 테스트 해볼수있음
+- ~~뭔가 엄청난걸 배우고 있는거 같애~~
+
+- 근데 container에 몇개 안돌아가는데 이거 로그 살펴보면 gunicorn 못찾았다고 나옴, 이게 장고가 돌아가기 위해서는 mariadb가 구동되어있어야함 근데 구동 안되고 있으니까 계속 컨테이너 만들기를 시도 하다가 mariaDB되면 돌아감, 또 nginx는 장고가 돌아갈때까지 시도했다가  돌아감
+- 따라서 container에 stopped 되어 있는 컨테이너들은 없애도 됨
+- tip] 켜지지 않았을때 생성시도를 하지 못하게 하는 방법도 있긴함(고오오급 방법)
+
+##### Docker Secret을 이용한 보안
+
+- django -secretkey, mariadb - password 이런걸 도커에서 관리하면서 필요한 서비스에 제공하도록 할 수 있음
+- 포테이너 - secrets 추가 눌러서 name:DJANGO_SECRET_KEY 해서 Secret 부분에 키 넣어줌
+- Dockerfiles에 SECRET_KEY 부분 지워줌
+- docker-compose.yml에 있는 MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD도
+
+- compose.yml파일 수정할거
+
+```python
+#.yml - django_container_gunicorn 부분에 추가
+secrets:
+    - MYSQL_PASSWORD
+    - DJANGO_SECRET_KEY
+#.yml - mariadb 부분에도 추가
+secrets:
+    - MYSQL_PASSWORD
+    - MYSQL_ROOT_PASSWORD
+#밑에 environment 부분 수정
+MYSQL_PASSWORD_FILE: /run/secrets/MYSQL_PASSWORD
+MYSQL_ROOT_PASSWORD_FILE: /run/secrets/MYSQL_ROOT_PASSWORD
+#마지막 부분에 추가
+secrets:
+    DJANGO_SECRET_KEY:
+        external: true
+	MYSQL_PASSWORD:
+        external: true
+	MYSQL_ROOT_PASSWORD:
+        external: true
+```
+
+- .yml에 django_test_image:5로 변경
+
+```python
+#deploy.py 윗부분에 선언
+def read_secret(secret_name):
+    file = open('/run/secrets/' + secret_name)
+	secret = file.read()
+    secret = secret.rstrip().lstrip()
+    file.close()
+    return secret
+#SECRET_KEY 부분 수정
+SECRET_KEY = read_secret('DJANGO_SECRET_KEY')
+#DATABASES - PASSWORD부분 수정
+'PASSWORD': read_secret('MYSQL_PASSWORD'),
+```
+
+- 이러고 deploy.py 깃에 올려줌
+- 이제 이미지 만들어야는디 Dockerfile가서
+- RUN echo 부분에 1234로 변화주고
+- RUN python.manage.py collectstatic 뒤로 밀어줄거
+- CMD["python manage.py collectstatic --noinput --settings=pinterest.settings.deploy && python ~"] 처럼 추가
+- 포테이너 - 이미지 추가 name: django_test_image:5, Dockerfile올려서 이미지 생성
+- stacks에서 추가 name:DJ, .yml파일 업로드 해서 생성
+- 기다렸다가 다 켜졌음 containers에 stopped 된거 없애주고
+- 테스트 해보면 잘 나옴~ 와 완강~~~
+
