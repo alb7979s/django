@@ -953,7 +953,7 @@ def post(self, *args, **kwargs):
         return HttpResponseForbidden()
 ```
 
-##### Decorator를 이용한 코드 간소화
+##### Decorator를 이용한 코드 간소화(바로 위 코드들 지워줌)
 
 ![img](https://blog.kakaocdn.net/dn/Ua6fG/btqRavOILyI/kk9nTLK4UsBRAN63GGelZK/img.png)
 
