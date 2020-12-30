@@ -2188,8 +2188,6 @@ project = forms.ModelChoiceField(queryset=Project.objects.all(), required=False)
 
 - required=False 해서 선택 없이도 제출 가능
 
-
-
 ##### 정리 및 다듬기
 
 - 게시글 쓸 때 프로젝트 고르는거 이름으로 나타나도록
@@ -2208,14 +2206,6 @@ def __str__(self):
 #if user 아닌경우 문제 생겨서 아닌경우도 처리해줘야함, 아래 내용 if아래 추가
 else: subscription = None
 ```
-
-
-
----
-
-이 아래 부분들~ 공부 다시해서(이해해서)  버그 수정 해야함
-
-
 
 - accountApp - hello_world.py 이거 과거의 잔재들 제거할거
 - pinterest 우클릭 Find in path 해서 hello치고 in project 누르면 hello 나온거 다 나옴 필요없는 부분들 지우기 (<u>주의! migrations 파일은 지우면 안됨</u>)
@@ -2245,22 +2235,19 @@ path('', ArticleListView.as_view(), name='home'),
 
 ```html
 <!-- accountApp - detail.html edit 부분 추가 -->
-<a class="material-icons" style="box-shadow: 0 0 4px #ccc"; border-radius: 10rem; padding: .4rem;
+<a class="material-icons" style="box-shadow: 0 0 4px #ccc; border-radius: 10rem; padding: .4rem;"
 ```
 
 - box-shadow: (x, y, 크기, 색)
 
 ```html
 <!-- 위에거 복사해서 Chang Info, Quit 부분에 복붙하고 사용하고픈 이름 사용-->
-<!-- ex) Chang Info => setting, Quit => cancel -->
+<!-- ex) Chang Info => settings, Quit => cancel -->
 <!-- cancel 부분 색 그림자 붉은색으로 #fcc -->
 ```
 
+
+
 ---
 
-accounts부분 문제 있는듯
-
-++비번 변경 안됨
-
-++quit 삭제 안됨
-
+articles/detail 하면 header 부분이 두개 나와 이거 고쳐야함(공부하며 작동 방식 이해하고 고치기)
