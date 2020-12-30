@@ -368,14 +368,6 @@ DATABASES ={
 
 - 글 올리고 장고 컨테이너 없애고 다시 켜봐도 데이터 그대로 남아있음
 
-
-
-
-
-
-
-
-
 ##### container의 한계, docker stack의 이해
 
 - 설정 계속 해줘야함, 컨테이너 꺼졌을때 문제
@@ -384,11 +376,11 @@ DATABASES ={
 
 - 따라서 컨테이너별로 들어가는 모든 셋팅들을 하나의 파일로 만들어줄거(해놓으면 컨테이너 하나하나 일일이 셋팅할 필요 없어짐) 	=> Docker STACK 이라고함
 - 컨테이너 꺼졌을 경우 reboot 해줘야는디 누가해줘?
+- 서비스는 만약 문제 생겨서 없어지면 자동으로 재부팅 시켜줌
 
 ![img](https://blog.kakaocdn.net/dn/b8KPgM/btqRAjPJMyC/7cwDnMNYtBKG6eFxugefhK/img.png)
 
 - 이렇게 서비스로 관리할거
-- 서비스는 만약 문제 생겨서 없어지면 자동으로 재부팅 시켜줌
 - 추가로 서비스 내에서 필요에 따라 컨테이너를 늘리거나 줄일수 있음(scale out 가능)
 
 ##### docker swarm의 이해
@@ -427,7 +419,7 @@ services:
     django:
         image: django_test_image:3		
         ports:
-            -8000:8000
+        	- 8000:8000
 ```
 
 - 이런식으로 쌓아나가면 됨
@@ -438,46 +430,45 @@ services:
 ##### 모든 컨테이너 yml 작성
 
 ```python
-#docker-compose.yml
 version: "3.7"
-services: 
-    nginx:
-        image: nginx:1.19.5
-        networks:
-            -network
-        volumes:
-            - /home/django_course/nginx.conf:/etc/nginx/nginx.conf
-            - static-volume:/data/static
-            - media-volume:/data/media
-        ports:
-            - 80:80
-	django_container_gunicorn:
-        image: django_test_image:4
-		networks:
-            - network
-        volumes:
-			- static-volume:/home/pinterest/staticfiles
-            - media-volume:/home/pinterest/media
-	mariadb:
-        image: mariadb:10.5
-		networks:
-            - network
-        volumes:
-            - maria-database:/var/lib/mysql
-		environment:
-            MYSQL_ROOT_PASSWORD: password123
-            MYSQL_DATABASE: django
-            MYSQL_USER: django
-            MYSQL_PASSWORD: password123
+services:
+  nginx:
+    image: nginx:1.19.5
+    networks:
+      - network
+    volumes:
+      - /home/django_course/nginx.conf:/etc/nginx/nginx.conf
+      - static-volume:/data/static
+      - media-volume:/data/media
+    ports:
+      - 80:80
+  django_container_gunicorn:
+    image: django_test_image:4
+    networks:
+      - network
+    volumes:
+      - static-volume:/home/pinterest/staticfiles
+      - media-volume:/home/pinterest/media
+  mariadb:
+    image: mariadb:10.5
+    networks:
+      - network
+    volumes:
+      - maria-database:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: django
+      MYSQL_USER: django
+      MYSQL_PASSWORD: password123
+      MYSQL_ROOT_PASSWORD: password123
+
 
 networks:
-    network:
-        
+  network:
+
 volumes:
-    static-volume:
-	media-colume:
-	maria-database:
-        
+  static-volume:
+  media-volume:
+  maria-database:
 ```
 
 - 이 파일을 기반으로 배포를 해보자~
@@ -495,7 +486,7 @@ volumes:
 - django -secretkey, mariadb - password 이런걸 도커에서 관리하면서 필요한 서비스에 제공하도록 할 수 있음
 - 포테이너 - secrets 추가 눌러서 name:DJANGO_SECRET_KEY 해서 Secret 부분에 키 넣어줌
 - Dockerfiles에 SECRET_KEY 부분 지워줌
-- docker-compose.yml에 있는 MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD도
+- docker-compose.yml에 있는 MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD도 추가
 
 - compose.yml파일 수정할거
 
@@ -538,12 +529,22 @@ SECRET_KEY = read_secret('DJANGO_SECRET_KEY')
 ```
 
 - 이러고 deploy.py 깃에 올려줌
+
 - 이제 이미지 만들어야는디 Dockerfile가서
+
 - RUN echo 부분에 1234로 변화주고
-- RUN python.manage.py collectstatic 뒤로 밀어줄거
-- CMD["python manage.py collectstatic --noinput --settings=pinterest.settings.deploy && python ~"] 처럼 추가
+
+- RUN python.manage.py collectstatic 뒤로 밀어줄거, 일단 지우고
+
+- ```
+  CMD ["bash", "-c", "python manage.py collectstatic --noinput --settings=config.settings.deploy && python manage.py migrate --settings=config.settings.deploy && gunicorn config.wsgi --env DJANGO_SETTINGS_MODULE=config.settings.deploy --bind 0.0.0.0:8000"]
+  ```
+
 - 포테이너 - 이미지 추가 name: django_test_image:5, Dockerfile올려서 이미지 생성
+
 - stacks에서 추가 name:DJ, .yml파일 업로드 해서 생성
+
 - 기다렸다가 다 켜졌음 containers에 stopped 된거 없애주고
+
 - 테스트 해보면 잘 나옴~ 와 완강~~~
 
