@@ -36,7 +36,7 @@
 
 - cmd - ssh (안되면 openssh 설치 후 하면 됨)
 - ssh root@IP
-- password 치면 접속 됨
+- password 치면 접속 됨(복사한거 붙여넣을 때 그냥 마우스 오른쪽 키 누르면 됨)
 
 
 
@@ -47,7 +47,7 @@
 - docker container ls 해보면 돌고있는 도커 확인 가능
 
 - dockerhub:: 전세계 모든 도커 이미지 올리고 받고 할 수 있는곳
-- portainer.io 부터 받을거, 도커 GUI로 바꿔주는 SW임
+- portainer 부터 받을거, 도커 GUI로 바꿔주는 SW임
 - [dockerhub](https://hub.docker.com/) 들어가서 portainer 검색해서 -ce 붙은거 사용해야함, 위에껀 더이상 지원 안해준대
 - 들어가서 deploy portainer 눌러보면 구동하는 방법 나옴
 
@@ -75,7 +75,7 @@ docker container ls 쳐보면 구동되고 있는 컨테이너 (portainer) 나�
 - portainer의 왼쪽 탭 Container - Add Container
 - name 아무거나, Image에 nginx 입력
 - publish a new newtwork port 누르면 port 연결 가능
-- host, container에 80, 80 넣고(테스트 할거라) deployment in progress 누르면 컨테이너 생성됨
+- host, container에 80, 80 넣고(테스트 할거라) deploy the container 누르면 컨테이너 생성됨
 - 빌린 가상서버 IP로 테스트 해보면 nginx 환영구 나옴
 
 ##### docker에 django 올리기
@@ -121,7 +121,7 @@ docker container ls 쳐보면 구동되고 있는 컨테이너 (portainer) 나�
    
    EXPOSE 8000
    
-   CMD ["python", "magage.py", "runserver", "0.0.0.0:8000"]
+   CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
    ```
 
    - docker hub 가서 python 치고 들어가서 Tags 탭 누르면 어떤 버젼 (사용 할 수)있는지 볼 수 있음
@@ -129,7 +129,7 @@ docker container ls 쳐보면 구동되고 있는 컨테이너 (portainer) 나�
 3. 이미지 생성
 
    -  포테이너 들어가서 Images - Build a new image - Upload - select file해서 Dockerfile 넣어줌 (이름 정해줌 django_test_image:1)
-   -  하고 Build image 하면 됨(처음엔 시간 좀 걸림)
+   -  하고 Build the image 하면 됨(처음엔 시간 좀 걸림)
    -  다시 포테이너 Images탭 들어가면 두개의 이미지 생겨있음(만든거랑 python)
 
 4. 컨테이너 실행
@@ -146,12 +146,12 @@ docker container ls 쳐보면 구동되고 있는 컨테이너 (portainer) 나�
 - gunicorn: nginx라는 웹서버와 django 컨테이너를 연결시켜주는 인터페이스
 - 파이참 켜서 pip install gunicorn
 - pip freeze > requirements.txt
-- docker.file은 안하고 requirements.txt만 해줄거 따라서 git add requirements.txt
+- dockerfile은 안하고 requirements.txt만 해줄거 따라서 git add requirements.txt
 - 해서 커밋해줌 "git commit -m gunicorn install update"
 
 ```
 #Dockerfile - CMD 부분 수정
-CMD ["gunicorn", "pinterest.wsgi", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "config.wsgi", "--bind", "0.0.0.0:8000"]
 ```
 
 - 근데 만든 커맨드들 캐시가 되어있어서 좀 변화를 줘야함(포테이너 써서 그런거래)
@@ -178,9 +178,9 @@ CMD ["gunicorn", "pinterest.wsgi", "--bind", "0.0.0.0:8000"]
 - 아래 Network 부분에 nginx-django 써주고 Deployment 해줌
 - 이번엔 nginx 컨테이너 만들어줄건데, 설정파일부터 만들어줘야함
 - 파이참 들어가서 루트에 nginx.conf 파일 만들어줌
-- [gunicorn](https://gunicorn.org/#deployment) 여기서 내용 복붙해서 수정할거
+- [gunicorn](https://gunicorn.org/#deployment) 여기서 내용 복붙해서 수정할거(proxy_pass_http 부분)
 
-```
+```python
 worker_processes auto;
 
 events {
@@ -203,7 +203,7 @@ http{
 - 파일질라 깔고 host에 IP주소 넣고, 사용자명 넣고, 비밀번호 넣고 포트 22로 연결하면 됨
 - .. 눌러서 home 들어가서 django_course폴더 만들어줌
 - 이 안에다가 로컬에 있던 파일 nginx.conf 올려줌
-- 이제 nginx 컨테이너 만들어줌(image nginx, host-port 80, network-nginx-django, Volums-container에 /etc/nginx/nginx.conf 넣고, Volums-host부분에 /home/django_course/nginx.conf 하고 Bind 체크하고 Deploy 해줌)
+- 이제 nginx 컨테이너 만들어줌(name-nginx, Image:nginx, host,container-port 80, network-nginx-django, Volums-container에 /etc/nginx/nginx.conf 넣고, Volums-host부분에 /home/django_course/nginx.conf 하고 Bind 체크하고 Deploy 해줌)
 - 참고로 위에 volumes에서 컨테이너 안이랑 밖에 있는 host랑(내가 빌린 가상서버) 연결해주는 과정
 - 빌린 IP주소 넣으면 들어가짐
 
@@ -232,7 +232,7 @@ http{
 
 ##### Docker Volume의 이해
 
-- 다른 컨테이너 같의 있는 데이터를 공유할 수 있는 기능
+- 다른 컨테이너 간의 데이터를 공유할 수 있는 기능
 
 ![img](https://blog.kakaocdn.net/dn/ccv0ZK/btqRQRX6hco/9gxGbtEaQpM1zKZ7xLvx61/img.png)
 
@@ -244,23 +244,23 @@ http{
 
 ##### ![img](https://blog.kakaocdn.net/dn/buJ5OI/btqRAkAUMHB/0ou2B5WI0rCk0RypX3d1lk/img.png)
 
-- 그래서 앞으로 이런식으로 만들거
+- 나는 앞으로 이런식으로 만들거
 
 ##### Docker Volume 생성 및 Container 적용
 
 - 포테이너 - containers 다 지워줌(포테이너 빼고)
 - volumes 들어가서 add volume누르고 static이란 이름으로 만들어줌
 - media 라는 볼륨도 하나 만들어줌
-- containers 가서 add container누르고 이름django_container_guricorn 으로, Image는 django_test_image:3, network port안건드려도 되고, 밑에 network에서 nginx-django 선택하고, vloumes에서 map additional volume 두개 추가
+- containers 가서 add container누르고 이름django_container_gunicorn 으로, Image는 django_test_image:3, network port안건드려도 되고, 밑에 network에서 nginx-django 선택하고, vloumes에서 map additional volume 두개 추가
 - 그 볼륨에서 container: /home/pinterest/staticfiles/ 
 - volume: static - local
 - container: /home/pinterest/media/
 - volume: media - local
 - 이러고 deployment 해주면 됨
 - 컨테이너에서 Quick actions 제일 왼쪽 누르면 로그 확인할 수 있음
-- nginx 컨테이너 만들어줌, 이미지 nginx:latest, host port 80, container port 80, network는 nginx-django
-- volumes가서 세개 추가해주고 container: /data/static/ , volume: static - local
-- container: /data/media, volume: media - local
+- nginx 컨테이너 만들어줌, 이미지 nginx:latest, host port 80, container port 80, network는 nginx-django(같은 네트워크 안에 있어야 하니까)
+- volumes가서 세개 추가해주고 container: /data/static/ , volume: static - local(그냥 새로운 경로를 만들어주는거)
+- container: /data/media/, volume: media - local
 - container: (Bind누르고) /etc/nginx/nginx.conf, host: /home/django_course/nginx.conf
 - deploy하기 전에 고쳐줘야 할게 있어!
 
@@ -299,10 +299,10 @@ location /media/ {
 - settings.py 이름을 base.py로 바꿔줌
 - base.py에서 같은건 냅두고 다른걸 빼낼거임
 - env관련 ~ ALLOWED_HOSTS부분 까지 잘라내서 local.py랑, deploy.py에 넣어줌
-- 둘 다 import os, environ랑 from .base import* 해줌
+- deploy.py 에서 DEBUG = False로 바꿔주고
+- 둘 다 from .base import* 해줌
 - base.py에서  DATABASE 부분도 잘라서 두 곳에 넣어줌
 - local.py는 그대로 냅두면 되는데 deploy.py 에서는 바꿔줘야함
-- DEBUG = False로 바꿔주고
 - DB 주석부분 컨트롤 클릭 해보면 양식 나옴
 
 ```python
@@ -320,32 +320,61 @@ DATABASES ={
 
 - 이러고 python manage.py runserver하면 에러남
 - 그 이유인 즉슨, settings.py 파일의 위치가 변했기 때문! 따라서 base.py - BASE_DIR에 .parent 추가해줌
-- 하지만 또 에러가 나는데 manage.py - main() 부분 pinterest.settings.local로 바꿔주면 잘 작동함
+- 하지만 또 에러가 나는데 manage.py - main() 부분 config.settings.local로 바꿔주면 잘 작동함
 
 ##### Maria DB 컨테이너 설정 및 Django 연동
 
 - database로 해서 볼륨 하나 만들어 놓음
 
 - 포테이너에서 원래 있던 마리아DB 컨테이너 삭제해줌
+
 - 참고로 config - settings - deploy.py 에 있는 DB내용들이랑 맞춰서 적어줘야함
+
 - 이름 mariadb, Image: mariadb:10.5, Network: nginx-dajngo, Volumes: container: /var/lib/mysql(mariaDB 공식 문서 where to stor data 부분에 있는 경로), vloume: database-local
+
 - Env 4개 추가 (참고로 공식 문서에 Environment Variables라고 환경변수 어떤 이름으로 넣어줘야는지 나와있음) 
+
 - MYSQL_ROOT_PASSWORD, password123
+
 - MYSQL_DATABASE, django
+
 - MYSQL_USER, django
+
 - MYSQL_PASSWORD, password123
+
 - 이러고 deployment 해줌
+
 - 이번엔 django container와 연결
+
 - Dokerfile파일 열고 RUN echo "testing" 추가 (의미없음, 깃 수정했는데 그거 캐시 때문에 반영 안되는거 막으려고)
+
 - RUN ~migrate 지우고 밑에 CMD로 추가해줄거임
+
 - CMD에 넣어야하는 명령어가 두개가 됨. 이런 경우에는 다음처럼 바꿈
-- CMD ["bash", "-c", "python manage.py migrate --settings=pinterest.settings.deploy && gunicorn pinterest.wsgi --env DJANGO_SETTINGS_MODULE=pinterest.settings.deploy --bind 0.0.0.0:8000"] 이러면 되는데 manage.py 가면 위치가 로컬환경으로 되어있음 따라서 배포 환경으로 바꿔줘야함 --settings=pinterest.settings.deploy가 그 부분, 뒤에 gunicorn 부분은 [여기](https://docs.gunicorn.org/en/latest/run.html#django) 참고함
+
+- ```
+  CMD ["bash", "-c", "python manage.py migrate --settings=config.settings.deploy && gunicorn config.wsgi --env DJANGO_SETTINGS_MODULE=config.settings.deploy --bind 0.0.0.0:8000"]
+  ```
+
+  이러면 되는데 manage.py 가면 위치가 로컬환경으로 되어있음 따라서 배포 환경으로 바꿔줘야함 --settings=pinterest.settings.deploy가 그 부분, 뒤에 gunicorn 부분은 [여기](https://docs.gunicorn.org/en/latest/run.html#django) 참고함
+
 - 추가로 RUN pip install gunicorn 아래에 RUN pip install mysqlclient 추가해줘야함
+
 - 포테이너 - 이미지 만들기 누르고 Dockerfile 넣어서 django_test_image:4 만들기
-- add container 해서 name:django_container_gunicorn, docker: django_test_image:4, network: nginx-django 해서 deployment 하면 됨
+
+- add container 해서 name:django_container_gunicorn, image: django_test_image:4, network: nginx-django 해서 deployment 하면 됨
+
 - 접속 해보면 잘 돌아감 굿굿
 
 - 글 올리고 장고 컨테이너 없애고 다시 켜봐도 데이터 그대로 남아있음
+
+
+
+
+
+
+
+
 
 ##### container의 한계, docker stack의 이해
 

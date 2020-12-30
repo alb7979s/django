@@ -2246,8 +2246,10 @@ path('', ArticleListView.as_view(), name='home'),
 <!-- cancel 부분 색 그림자 붉은색으로 #fcc -->
 ```
 
-
+- 마지막으로 config - settings.py - STATIC_URL 부분 = '/static/' 으로 바꿔주기, docker 볼륨 쓸 때 오류남
 
 ---
 
-articles/detail 하면 header 부분이 두개 나와 이거 고쳐야함(공부하며 작동 방식 이해하고 고치기)
+- articles/detail 하면 header 부분이 두개 나와 이거 고쳐야함(공부하며 작동 방식 이해하고 고치기)
+
+- 로그인 안하고 subscription 누르니까 에러남
