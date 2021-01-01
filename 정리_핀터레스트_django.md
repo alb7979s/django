@@ -33,7 +33,7 @@
 
 - Model: DB관련
 - View: 유저-서버 통신(인증, 계산, 확인 등)
-- Template: 인터페이스
+- Template: 인터페이스(FE와 관련있음 HTML같은 정적인 파일을 동적으로 작동하게끔 해줌)
 - template <-> view <-> model
 
 ##### Acoount
@@ -48,27 +48,40 @@ def hello_world(request):
     return HttpResponse('Hello world')	#Alt + Enter 누르면 자동으로 import해줌 개꿀
 ```
 
-```python
-#accountApp/urls.py
-path('account/', include('accountApp.urls'))	#이거 추가해서 매핑시켜줌
-```
+- config - urls.py(가장 먼저 요청 받는 곳) 여기서 url을 연결해줌, 주소창에 쓰는 내용이랑 어디 파일을 참고할건지 연결해주는 작업
 
 ```python
 #config/urls.py
-app_name = 'accountApp'		#이렇게 해두면 나중에 함수써서 쉽게 호출가능
+path('account/', include('accountApp.urls'))	#이거 추가해서 매핑시켜줌
+```
+
+- 여기에서 똑같이 연결해주는 작업 해줌
+
+```python
+#accountApp/urls.py
+app_name = 'accountApp'	#이렇게 해두면 나중에 "127.0.0.1:8000/account/hello_world/" 이렇게 써야될걸 함수써서 "accountApp"으로 호출가능
 urlpatterns = [
-    path('hello_world/', hello_world, name='hello_world')
+    path('hello_world/', hello_world, name='hello_world')	#접근주소, view, name
 ]
 ```
 
 - 이러고 서버 구동 시킨 후 http://127.0.0.1:8000/account/hello_world/ 들어보면 잘 뜸
 
+##### git
+
+- version control이 핵심
+
+![img](https://blog.kakaocdn.net/dn/cJFQhW/btqSdtbpkLm/YkhAlePiAxE6rj2mSpv8dK/img.png)
+
+- branch로 버전 관리 가능(배포 버전, 베타 버전 이런식으로)
+- 위처럼 Merge도 가능
+
 ##### git ignore(7강 참고)
 
-- project - .gitignore 파일 만들고 [요기](https://github.com/github/gitignore/blob/master/Global/JetBrains.gitignore)에서 복붙 해넣으면 필요없는거 추적 안함
-
+- project - .gitignore 파일 만들고 [요기](https://github.com/github/gitignore/blob/master/Global/JetBrains.gitignore)에서 복붙 해넣으면 필요없는거 추적 안함(가상환경  넣을필요 없으니까 이 파일에 venv/도 추가)
 - config/settings.py 에 secret_key 관리해줘야하는데, [요기](https://django-environ.readthedocs.io/en/latest/)서 secret_key 노출 안시키고 내부 파일에서 자동으로 읽어서 개선해줄 수 있음
-- 위 사이트에서 하란대로 하면 됨 pip install dajngo-environ
+- 위 사이트 installation에서 하란대로 하면 됨(아래 적어놓은대로 하면 됨) 
+- pip install dajngo-environ
 
 ```python
 #settings
@@ -79,7 +92,7 @@ env = environ.Env(
 )
 ```
 
-- .env 파일 만들어서
+- root폴더에 .env 파일 만들어서
 
 ```python
 #.env
@@ -107,7 +120,7 @@ SECRET_KEY = env('SECRET_KEY')
 .env 	#라고 추가해주면 추적 안됨
 ```
 
-- VCS - Enable Version control integration 누르고 git 누르면 추적 되는거 안되는거 구분 됨
+- VCS - Enable Version control integration 누르고 git 활성화 됨
 - git status 해가면서 필요 없는거 추가해주면 됨 (Ex. .idea/)
 
 ```python
@@ -119,27 +132,29 @@ __pycache__/
 #가상환경 python에서 그냥 만들었으면 venv/ 추가
 ```
 
-##### template
+##### template(extends, include 둘 다 HTML 가져오는 느낌은 비슷한데 용도가 살짝 다름)
 
-- extends: 바탕을 깔아주는 느낌
+- extends: 바탕을 깔아주는 느낌(구역을 나눠놓은 HTML 파일 가져옴)
 
 ![img](https://blog.kakaocdn.net/dn/UrTQz/btqQu4dP7X7/AaEjIiB1hKj30qnZNmQq10/img.png)
 
-- include: 뭔가를 가져와서 갖다 붙이는 느낌
+- include: 조각들을 가져와서 붙이는 느낌
 
 ![img](https://blog.kakaocdn.net/dn/xe51n/btqQmQujZen/SDdFPPj7v0c3ExWZIsZb9K/img.png)
 
 ![img](https://blog.kakaocdn.net/dn/bKaDgC/btqQu5cHWuy/XYg7Z1reb2rjmkzFwBCEIk/img.png)
 
 - project 폴더에 templates 폴더 생성, 그 안에 base.html 생성
-
 - views.py에서 html파일(템플릿) 가지고 와서 그 내용 채워넣는 형식으로 만들거임
+- 기본 동작: base.html이 temlates 안에 있음으로써 accountApp-view에서 응답을 해줄 때 여기서 템플릿을 가져와서 내용을 나타내는 역할, 그니까 view에서 템플릿을 가져와서 거기에 내용을 채워넣는 식으로 만들거임
 
 ```python
-#views.py
+#views.py 
 def hello_world(request):
-    return render(request, 'base.html')
+    return render(request, 'base.html')		#요게 가져오는거
 ```
+
+- 근데 이러고 테스트 해보면 에러뜸, config - settings.py에서 templates 경로 입력 안해줘서 그럼
 
 ```python
 #config/settings.py 에 매핑 해줘야함
@@ -150,6 +165,8 @@ TEMPLATES = [
 ]
 ```
 
+- 이러고 테스트 해보면 잘 됨
+- base.html에서 우선 head 부분 새로 .html 만들고 include 구문으로 가져오도록 할거임
 - templates파일에 head.html 생성
 
 ```html
@@ -182,6 +199,8 @@ TEMPLATES = [
 
 - ##### Tip] 알트 누르고 커서 여러개 클릭하면 다중커서 조절 가능!!
 
+- div 태그는 가능한 폭을 모두 가져가는 형태
+
 - 서버 켜서 어떻게 되었나 한번 확인해보기
 
 - 여기 body에서 3개 부분이 있는데 첫부분, 세번째 부분은 계속 사용할거므로 include 구문 사용해서 만들어줌
@@ -190,15 +209,18 @@ TEMPLATES = [
 <!-- header.html, footer.html 만들고 아래처럼 include하면 똑같이 쓸수있음-->
 <body>
 	{% include 'header.html' %}
+    
+    <!-- content라는 블럭을 새로 만들어서 내용 바뀌는거 처리해줄거 -->
     {% block content %}
     {% endblock %}
+    
     {% include 'footer.html' %}
 </body>
 ```
 
 - content부분 accountApp 내부에서 사용할거임, 이제 그거 사용하기 위해
 - accountApp 폴더에 templates 폴더 만들고, 그 안에 accountApp 폴더 만들어줌
-- 그 안에다가 .html 파일 만들어줄거, 저거 폴더 많이 만드는 이유는 나중에 가져오는 코드 짤때 가독성 높이기 위해서래
+- 그 안에다가 .html 파일 만들어줄거, 저거 폴더 많이 만드는 이유는 나중에 가져오는 코드 짤때 가독성 높이기 위해서래(사용시 어떤 앱에서 html을 가져왔는지 알 수 있음)
 - hello_wolrd.html 만들고 
 
 ```html
@@ -215,11 +237,15 @@ TEMPLATES = [
 {% endblock %}
 ```
 
+- 그니까 어떤 앱에서 html 페이지를 만들껀데, extends로 뼈대를 가져오고 block으로 된것들 위처럼 하면 입맛에 따라 꾸밀 수 있음
+
 ```python
 #accountApp/views.py
 def hello_world(request):
     return render(request, 'accountApp/hello_world.html')
 ```
+
+- accountApp/hello_world.html을 가져오도록(그니까 hello_world.html을 가져오는데, 그 html은 base.html(뼈대)를 가져오고, 그 안에 뼈대는 나눠진 부분마다 html을 만들어서 include로 가져오는 형태임)
 
 ##### style
 
@@ -240,6 +266,7 @@ def hello_world(request):
 </div>
 ```
 
+- nav -> 나중에 네비게이션바 만들거(어느 곳으로 갈지 나타내는거)
 - 이거 하고 서버 키고 들어가보면 왼쪽에 가있는데 F12 눌러서 테스트 해볼 수 있음
 - div쪽 누르고 style 부분에 text-align: cneter; 이런식으로 테스트 가능
 - 이번엔 밑 부분을 꾸며봅시다~
@@ -258,20 +285,23 @@ def hello_world(request):
 </div>
 ```
 
-- margin: 2rem 0; 이러면 앞에 숫자는 상하, 뒤에 숫자는 좌우
-- base.html <body>에 위, 중간, 아래 사이에 <hr> 구분선 넣어주면 더 이뻐짐
+- margin: 2rem 0; 이렇게 두 부분으로 나누면 앞에는 상하, 뒤에는 좌우를 나타냄
+- base.html \<body\>에 위, 중간, 아래 사이에 \<hr\> 구분선 넣어주면 더 이뻐짐
 
 ##### bootstrap
 
-- [여기](https://getbootstrap.com/docs/5.0/getting-started/introduction/)들어가서 css 복사 한 후에 head.html <head>쪽에 넣어줌
+- 트위터에서 만든 스타일 라이브러리 같은거임, css를 링크 거는것만으로 바로 적용시킬 수 있음
+
+- [여기](https://getbootstrap.com/docs/5.0/getting-started/introduction/)들어가서 css 복사 한 후에 head.html \<head\>쪽에 넣어줌
 - Tip) ctrl + / 하면 주석
+- 추가로 폰트 적용할거
 - 구글 폰트 검색해서 글자 써보고 이뻐보이는 폰트 고르면 됨 select this style 누르면 링크 뜨는데 head.html 파일에 복붙해주면 됨(이런거 적용하면서 어떤건지 주석 달기)
 - css rules to specify families 부분 복사해서 적용할 곳에 붙여넣기 해넣어주면 끝(적용할 style 부분, 여기선 header.html의 제목부분, footer.html의 아래 제목 부분)
 
 ##### CSS파일 분리
 
 - 보통 html에 뼈대만 남겨두고 style 같은거(디자인적인거) css로 빼줌
-- static 설정 해볼거
+- static(css, js, font 등 자주 변경되지 않는 파일들) 설정 해볼거
 
 ```python
 #setting.py
@@ -281,7 +311,9 @@ STATICFILES_DIRS = [
 ]
 ```
 
-- tip) ctrl + b 하면 선언된 곳 찾아줌
+- [파일, 디렉토리 경로 다루는 os 주요 함수 정리](http://pythonstudy.xyz/python/article/507-%ED%8C%8C%EC%9D%BC%EA%B3%BC-%EB%94%94%EB%A0%89%ED%86%A0%EB%A6%AC)
+
+- os.path.join(): 경로를 병합하여 새 경로 생성
 - 프로젝트 폴더에 static 폴더 만들어줌 여기서 static 파일들 관리할거
 - static에서 base.css 생성
 
@@ -306,12 +338,28 @@ STATICFILES_DIRS = [
 <link rel="stylesheet" type="text/css" href="{% static 'base.css'%}">
 ```
 
-```python
-#settings.py
-STATIC_URL = '/head.html/'
-```
+- css링크가 어떻게 되냐면 settings.py - STATIC_URL 부분이랑 장고가 알아서 합쳐줌(STATIC_URL 바꿔가며 테스트해보기)
 
-- 추가로 style => class로 바꿔서 base.css로 넘겨주는거 11강_13분~
+```css
+/* base.css 이번에 바꿀곳들인데, html은 알아서 찾아 바꾸기 */
+.pragmatic_logo {
+    font-family: 'Lobster', cursive;
+}
+
+.pragmatic_footer_button {
+    font-size: .6rem;
+}
+
+.pragmatic_footer {
+    text-align:center;
+    margin-top: 2rem;
+}
+
+.pragmatic_header {
+    text-align:center;
+    margin: 2rem 0;
+}
+```
 
 ##### CSS 핵심
 
