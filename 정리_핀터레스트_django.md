@@ -408,7 +408,7 @@ STATICFILES_DIRS = [
 .NAME {
 	STYLE
 }
-<!-- 3 -->
+<!-- 3 --> 
 <style>
     .tesing{
         background-color: white;
@@ -464,6 +464,8 @@ class HelloWorld(models.Model):
 
 ##### HTTP 실습
 
+- post 쓸라면 .html 파일 안에 \<form\>을 만들어줌(보낼 데이터 꾸러미라 생각하면 됨)
+
 ```html
 <!-- hello_world.html -->
 <form actions="/account/hello_world/" method="post">	
@@ -471,11 +473,12 @@ class HelloWorld(models.Model):
 </form>
 ```
 
-- 첫 줄은 action 주소로 method를 보내겠다 이런뜻
+- 첫 줄은 action은 요청 보낼 주소로 method - "post"를 사용해서 보내겠다 이런뜻
+- value => 버튼 안에 들어갈  텍스트
 - 이대로 서버 돌려서 버튼 눌러보면 에러뜸
 
 ```html
-<!-- form 안에 명시해줘야함 -->
+<!-- 장고 쓸때 form 안에 항상 명시해줘야함 -->
 {% csrf_token %}
 ```
 
@@ -484,7 +487,7 @@ class HelloWorld(models.Model):
 ```python
 #accountApp/views.py
 def hello_world(request):
-    
+    #요청을 받은 객체 안에서 메소드가 POST일 경우
     if request.method == "POST":
         return render(request, 'accountApp/hello_world.html', context={'text': 'POST METHOD!'})
 	else:
@@ -520,6 +523,8 @@ def hello_world(request):
 </form>
 ```
 
+- font-family: 'lobster', 'cursive'; 뜻이 만약 lobster 없으면 cursive 가져와라 이런 뜻
+
 ```python
 #views.py
 #hello_world() if문
@@ -527,6 +532,7 @@ temp = request.POST.get('hello_world_input')
 return render(request, 'accountApp/hello_world.html', context={'text': temp})
 ```
 
+- request.POST중 hello_world_input이라고 받은 데이터를 temp에 저장
 - 여기까지 하면 통신해서 데이터 긁어오는거함
 - 아래서는 그 데이터 저장하는 거까지
 
@@ -534,9 +540,9 @@ return render(request, 'accountApp/hello_world.html', context={'text': temp})
 #views.py
 #hello_world() if문
 temp = request.POST.get('hello_world_input')
-new_hello_world = HelloWorld()
-new_hello_world.text = temp
-new_hello_world.save()					  #DB에 저장
+new_hello_world = HelloWorld()			#models.py에 만들어놓은 모델 가져옴
+new_hello_world.text = temp				#가져온 모델의 text필드에 저장
+new_hello_world.save()					#DB에 저장
 return render(request, 'accountApp/hello_world.html', context={'hello_world_output': new_hello_world })	#객체를 보내는거임 따라서 아래에 추가 작업
 ```
 
