@@ -1168,12 +1168,12 @@ class ProfileCreateView(CreateView):
 ```
 
 - 이러고 create 테스트 해보면 파일 안넣었다고 오류뜸
-- create.html - form 부분에 enctype="multipart/form-data" 추가해줌
-- 그러고 다시 테스트해보면 profile.user_id 없다고 오류뜸
+- create.html - form 부분에 enctype="multipart/form-data" 추가해줌(이미지 있는곳 추가해줘야함)
+- 그러고 다시 테스트해보면 profile.user_id 없다고 오류뜸 user는 서버내에서 구현할거임
 
 ```python
 #views-py ProfileCreateView() 부분에 메서드 추가
-def form_valid(self, form):
+def form_valid(self, form):	#forms.py에서 날라온 데이터를 form으로 가져옴
     temp_profile = form.save(commit=False)	#DB저장하지 않고 임시로 저장
     temp_profile.user = self.request.user
     temp_profile.save()
@@ -1267,7 +1267,7 @@ def profile_ownership_required(func):
 ##### get_success_url 그리고 리팩토링
 
 - views.py - ProfileCreateView() - success_url 부분 'accountApp: detail' 로 수정 하려함.(이곳으로 가는게 더 알맞음)
-- 근데 위처럼 그냥 수정해주면 urls.py - detail부분 보면 pk도 같이 넘겨줘야함 따라서 아래처럼 내부 메소드 수정해줘야함
+- 근데 위처럼 그냥 수정해주면 accountApp - urls.py - detail부분 보면 pk도 같이 넘겨줘야함 따라서 아래처럼 내부 메소드 수정해줘야함
 
 ```python
 #views.py - ProfileCreateView(), ProfileUpdateView()에 추가 
@@ -1380,19 +1380,19 @@ urlpatterns=[
 {% block content %}
 
 <style>
-.container div {
-  width: 250px;
-  background-color: antiquewhite;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 1rem;
-
-  .container img{
+    .container div {
+      width: 250px;
+      background-color: antiquewhite;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 1rem;
+    }
+    
+    .container img{
     width: 100%;
-    border-radius: 1rem;
-  }
-}
+    border-radius: 1rem;  
+    }
 
 </style>
 
@@ -1425,8 +1425,9 @@ urlpatterns=[
 
 ```js
 #magicgrid.js 마지막 부분 magicGrid.Listen() 위에 추가
+#문서의 모든 img태그 masonrys에 저장해서 반복문으로 출력해줄거
 var masonrys = document.getElementsByTagName("img");
-
+#이미지가 load 됐을때 magicGrid 다시 포지셔닝 하라는 이벤트 리스너 추가하는거
 for(let i = 0; i < masonrys.length; i++){
     masonrys[i].addEventListener('load', function(){
         magicGrid.positionItems();
@@ -1668,6 +1669,7 @@ path('list/' ArticleListView.as_view(), name='list'),
 <div class="container">
     {% for article in article_list %}
     <a href="{% url 'articleApp:detail' pk=article.pk %}">
+        <!-- snippets/card.html에서 article 사용하는거 요기article과 연결해줌 -->
     	{% include 'snippets/card.html' with article=article %}
     </a>
     {% endfor %}
