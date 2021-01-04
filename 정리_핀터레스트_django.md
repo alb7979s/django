@@ -604,7 +604,9 @@ return HttpResponseRedirect(reverse('accountApp:hello_world'))
 
 ##### Class Based View, 장고의 CRUD (이론 위주)
 
-- **C**reate **R**ead **U**pdate **D**elete	=> 장고에선 이 네가지 작업 쉽게 할 수 있는 클래스 제공(CBV)
+- 위에 hello_world는 아무나 서버에 보낼 수 있음, 이거 인증시스템을 구축하고싶음. 그래서 accountApp 만드는 중 장고에서 제공해주는 클래스 이용할거
+
+- **C**reate **R**ead **U**pdate **D**elete	=> 장고에선 이 네가지 작업 쉽게 할 수 있는 클래스 제공(ClassBasedView)
 - CBV <-> FunctionBasedView: 지금까지 만든 함수 기반 뷰
 - CBV으로 짜면 생산성, 가독성 좋아짐
 
@@ -620,7 +622,7 @@ class AccountCreateView(CreateView):
     model = User		#tip) ctrl + b 누르면 그 소스코드로 갈 수 있음
     form_class = UserCreationForm
     success_url = reverse_lazy('accountApp:hello_world')
-    template_name = 'accountApp/create.html'
+    template_name = 'accountApp/create.html'	#어느 html 파일 이용해서 보여줄지
 ```
 
 - 함수랑 class 불러오는 방식때문에 class에서 reverse()쓰면 에러뜸 그래서 reverse_lazy 써준거
@@ -635,9 +637,10 @@ path('create/', AccountCreateView.as_view(), name = 'create'),
 {% extends 'base.html' %}
 {% block content %}
 	<div style = "text-align: center">
+        <!-- accountApp내부에 있는 create로 연결해주세요 라는뜻 -->
         <form action="{% url 'accountApp:create' %}" method = "post">
             {% csrf_token %}
-            {{ form }}
+            {{ form }}		<!-- view에서 form_class 지정해준거 이렇게 써서 사용 -->
             <input type="submit" class="btn btn-primary">
         </form>
 	</div>
@@ -648,9 +651,11 @@ path('create/', AccountCreateView.as_view(), name = 'create'),
 
 ##### Login/ Logout 구현
 
+- 위에선 views.py에서 특정 뷰를 상속받은 다음에 설정할 파라미터들을 받아서 넘겨주는 식이었는데, 로그인, 로그아웃은 간단해서 그냥 url.py에 직접 가져옴
+
 ```python
 #url.py - urlpatterns에 추가, login, logout은 간단해서 여기에 직접 선언할거임
-path('login/', LoginView.as_view(template_name='accountApp/login.html'), name='login')
+path('login/', LoginView.as_view(template_name='accountApp/login.html'), name='login')		#로그인뷰는 템플릿 가져옴, (템플릿 직접 만들거)
 path('logout/', LogoutView.as.view(), name='logout' )
 ```
 
@@ -704,6 +709,8 @@ LOGIN_REDIRECT_URL = reverse_lazy('accountApp:hello_world')
 LOGOUT_REDIRECT_URL = reverse_lazy('accountApp:login')
 ```
 
+- 위에 두 과정이 class를 이용해서 success_url을 파라미터로 넘겨주던 것을 직접 구현한거라고 볼수있나?? success_url 클래스 부분 살펴보면서 확인하기
+
 ##### Bootstrap을 이용한 Form 디자인 정리
 
 - pip install django-bootstrap4
@@ -723,7 +730,7 @@ LOGOUT_REDIRECT_URL = reverse_lazy('accountApp:login')
 ```
 
 - mt는 margin-top 이고, mt-3은 기존의 3배
-- col-6 같은 경우는 12가 100%고 6이면 50%, 3이면 25%(부모 너비의)
+- col-6 같은 경우는 12가 부모의 너비 100%고 6이면 50%, 3이면 25%
 
 ```html
 <!-- create.html 위 login.html처럼 수정-->
@@ -740,6 +747,7 @@ LOGOUT_REDIRECT_URL = reverse_lazy('accountApp:login')
         </div>
         <form action="{% url 'accountApp:create' %}" method="post">
             {% csrf_token %}
+            <!-- bootstrap이 적용된 form 사용 -->
             {% bootstrap_form form %}
             <input type="submit" class="btn btn-dark rounded-pill col-6 mt-3">
         </form>
@@ -750,7 +758,7 @@ LOGOUT_REDIRECT_URL = reverse_lazy('accountApp:login')
 
 - 이번엔 hello_world 부분 폰트 바꿔줄거
 - 글꼴 otf 설치한 후에 압축 풀고 .otf 이름 간단한 것들만 복사해서
-- pinterest-static에 fonts 폴더 생성해서 복사한 파일들 붙여넣기
+- root-static에 fonts 폴더 생성해서 복사한 파일들 붙여넣기
 
 ```html
 <!-- head.html - </head> 윗부분에 아래와 같은 형식으로 4개 추가 -->
@@ -802,17 +810,17 @@ class AccountDetailView(DetailView):
 path('detail/<int:pk>', AccountDetailView.as_view(), name='detail'),
 ```
 
-- detail에서 특정 유저의 정보를 봐야하니까 그 계정의 PK가 필요, 그래서 <int: pk> 선언해줌
+- detail같은 경우 특정 유저의 정보를 봐야하니까 그 계정의 고유한 계정의 정보가 필요, 그래서 <int: pk> 선언해줌
 
 ```html
-<!-- header.html - else 아래 추가-->
+<!-- header.html - else 아래 추가 (로그인 되어있을때니 유저의 pk가 존재할거임) -->
 <a href="{% url 'accountApp: detail' pk=user.pk %}">
 	<span>MyPage</span>
 </a>
 ```
 
 - 테스트 해보면 logout 상태에서 Mypage안보이고 login 상태면 Mypage 보임
-- 접속한 유저의 페이지만 볼 수 있으니까 좀 수정해주면
+- 접속한 유저의 페이지만 볼 수 있으니까 다른 사람이 접속해서 다른 유저의 페이지 볼 수 있게 좀 수정해줄거임
 
 ```python
 #views.py - AccountDetailView() 부분에 추가
@@ -896,8 +904,9 @@ path('update/<int:pk', AccountUpdateView.as_view(), name='update')
 from django.contrib.auth.forms import UserCreationForm
 class AccountUpdateForm(UserCreationForm):	#상속 받아줌
     def __init__(self, *args, **kwargs):
+        #초기화
         super().__init__(*args, **kwargs)
-        
+        #칸 비활성화
         self.fields['username'].disabled = True
 ```
 
@@ -995,6 +1004,7 @@ else:
 ```python
 #views.py - AccountUpdateView(), AccountDeleteView() 아래 부분에 추가
 def get(self, *args, **kwargs):
+    #get_object():여기선 User object중, UpdateView니까 urls.py-update-<int:pk>부분
     if self.request.user.is_authenticated and self.get_object() == self.request.user:
         return super().get(*args, **kwargs)
     else:
@@ -1007,19 +1017,23 @@ def post(self, *args, **kwargs):
         return HttpResponseForbidden()
 ```
 
-##### Decorator를 이용한 코드 간소화(바로 위 코드들 지워줌)
+##### Decorator를 이용한 코드 간소화(바로 위 코드들 지우고 Decorator로 간소화 할거임)
 
 ![img](https://blog.kakaocdn.net/dn/Ua6fG/btqRavOILyI/kk9nTLK4UsBRAN63GGelZK/img.png)
 
-- 이런 Decorator를 사용해서 더 깔끔하게 고쳐줄거임
+![img](https://blog.kakaocdn.net/dn/nR7MX/btqSxBUCPzU/i3aDeNh40ztDiy72RqXPNk/img.png)
+
+- 이런식으로 Decorator를 사용해서 더 깔끔하게 고쳐줄거임
 
 ```python
-#views.py - import구문 아래에 추가
-@login_required		#이거 추가하고 바로 전 hello_world() 수정했던 if-else문 지워줌
-#AccountUpdateView()는 class이고, 안에 함수 메서드 이므로 좀 다르게 선언함
+#views.py - hello_world() 위에 추가하고 위에서 선언했던 if-else문 지워줌
+@login_required		#함수는 이렇게 바로 적용 가능
+
 #AccountUpdateView(), AccountDeleteview위에 선언
+#근데 AccountUpdateView()는 class이고, 안에 함수 메서드 이므로 좀 다르게 선언함
 @method_decorator(login_required, 'get')
 @method_decorator(login_required, 'post')
+#자기 자신인지 확인하는 과정(account_ownership_required 커스텀 데코레이션 만들어 사용할거)
 @method_decorator(account_ownership_required, 'get')
 @method_decorator(account_ownership_required, 'post')
 ```
@@ -1028,9 +1042,12 @@ def post(self, *args, **kwargs):
 #accountApp(부모) - decorators.py 생성
 def account_ownership_required(func):
     def decorated(request, *args, **kwargs):
+        #요청 받은 pk의 유저 object 저장
         user = User.objects.get(pk=kwargs['pk'])
+        #다른 사람이면 거부
         if not user == request.user:
             return HttpResopnseForbidden()
+       	#같으면 그대로 보내줌
         return func(request, *args, **kwargs)
     return decorated
 ```
@@ -1105,10 +1122,11 @@ class Profile(models.Model):
 - ModelForm은 기존에 있던 모델을 그대로 form으로 변환해주는 기능
 
 ```python
-#profileApp - forms.py 생성 후
+#profileApp - forms.py 생성 후 ModelForm 상속 받은 후 어떤 필드를 입력할 수 있게 만들지만 설정해주면 그 모델의 폼으로 그대로 변환됨
 class ProfileCreationForm(ModelForm):
     class Meta:
         model = Profile
+        #models.py에 user라는 필드도 있었는데 이건 서버에서 따로 처리해줄거
         fields = ['image', 'nickname', 'message']
 ```
 
@@ -2301,9 +2319,3 @@ path('', ArticleListView.as_view(), name='home'),
 ```
 
 - 마지막으로 config - settings.py - STATIC_URL 부분 = '/static/' 으로 바꿔주기, docker 볼륨 쓸 때 오류남
-
----
-
-- articles/detail 하면 header 부분이 두개 나와 이거 고쳐야함(공부하며 작동 방식 이해하고 고치기)
-
-- 로그인 안하고 subscription 누르니까 에러남
