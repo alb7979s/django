@@ -1806,6 +1806,7 @@ class CommentCreateView(CreateView):
     form_class = CommentCreationForm
     template_name = 'commentApp/create.html'
     def get_success_url(self):
+        #여기서 object는 comment 가리킴
         return reverse('articleApp:detail', kwargs={'pk': self.object.article.pk})
 ```
 
@@ -1843,7 +1844,7 @@ urlpatterns = [
                 Login
             </a>
             {% endif %}
-            
+            <--! 주의 아래처럼 하면 aticle값 브라우저에서 조작 가능함 -->
 			<input type="hidden" name="article_pk" value="">
         </form>
 	</div>
@@ -2007,9 +2008,9 @@ gutter: 12,
 ```
 
 - create Article 부분이 좀 엉성한데 수정해주면,
-- articleApp - list.html - create Article 부분 class에 px-3 추가
+- articleApp - list.html - create Article 부분 class에 col-3지우고, px-3 추가
 
-- 모바일에서 크기가 살짝 큰 느낌일때 좀 줄이는 방법
+- 모바일에서 크기가 살짝 큰 느낌일때 좀 줄이는 방법(일정 사이즈 이하로 떨어지면 폰트 사이즈도 줄여주도록)
 
 ```css
 /* static - base.css 마지막에 추가 */
@@ -2139,7 +2140,7 @@ class SubscriptionView(RedirectView):
 
 - tip) margin 4개로 쓰면 위부터 시계방향으로 설정됨
 
-- 이러고 테스트해보면 뭔가 되는거 같은데 바뀌는거 없음 버튼이 어떻게 행동할지 수정해줄거
+- 이러고 테스트해보면 뭔가 되는거 같은데 바뀌는거 없음 버튼이 어떻게 행동할지 수정해줄거(지금 접속해있는 유저가 이 게시판에 대한 구독정보가 있는지 없는지 확인해주는 작업 추가해줄거)
 
 ```python
 #projectApp - views.py - ProjectDetailView() - get_context_data()에 추가
