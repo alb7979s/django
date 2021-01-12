@@ -114,21 +114,22 @@ docker container ls 쳐보면 구동되고 있는 컨테이너 (portainer) 나�
    
    RUN pip install -r requirements.txt
    
-   #이 줄은 임시로 하는거
+   #이 줄은 임시로 하는거, 나중에 docker secret 이용해서 가려줌
    RUN echo "SECRET_KEY=..." > .env
    
    RUN python manage.py migrate
    
    EXPOSE 8000
-   
+   #이 줄도 임시, runserver는 개발 테스트용이라 쓰면 안 됨(퍼포먼스, 보안이슈 등)
    CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
    ```
 
    - docker hub 가서 python 치고 들어가서 Tags 탭 누르면 어떤 버젼 (사용 할 수)있는지 볼 수 있음
+   - [리눅스 옵션 명령어(Ex. -r)](https://www.linux.co.kr/home2/board/subbs/board.php?bo_table=lecture&wr_id=1411)
 
 3. 이미지 생성
 
-   -  포테이너 들어가서 Images - Build a new image - Upload - select file해서 Dockerfile 넣어줌 (이름 정해줌 django_test_image:1)
+   -  포테이너 들어가서 Images - Build a new image - Upload - select file해서 Dockerfile 넣어줌 (이름 정해줌 django_test_image:1), :뒤에는 태그 이름
    -  하고 Build the image 하면 됨(처음엔 시간 좀 걸림)
    -  다시 포테이너 Images탭 들어가면 두개의 이미지 생겨있음(만든거랑 python)
 
@@ -143,6 +144,9 @@ docker container ls 쳐보면 구동되고 있는 컨테이너 (portainer) 나�
 - 위에처럼 runserver로 장고 컨테이너 그대로 실행하면 문제가 있음
 - 하면 안되는 방법, 장고 공식문서에 이 명령어 쓰지 말라고 되어있음(개발 테스트용이래)
 - 따라서 추가적으로 프로그램을 설치해줄거(Gunicorn)
+
+![img](https://blog.kakaocdn.net/dn/8eu64/btqTlGuQZtS/j07XAemKb6K3Vf4qoAxm5K/img.png)
+
 - gunicorn: nginx라는 웹서버와 django 컨테이너를 연결시켜주는 인터페이스
 - 파이참 켜서 pip install gunicorn
 - pip freeze > requirements.txt
@@ -154,7 +158,7 @@ docker container ls 쳐보면 구동되고 있는 컨테이너 (portainer) 나�
 CMD ["gunicorn", "config.wsgi", "--bind", "0.0.0.0:8000"]
 ```
 
-- 근데 만든 커맨드들 캐시가 되어있어서 좀 변화를 줘야함(포테이너 써서 그런거래)
+- 근데 전에 만든 커맨드들 이미 캐시가 되어있어서 새로운 이미지를 만들려거든 좀 변화를 줘야한대(포테이너 써서 그런거래)
 - 따라서 echo 위에 RUN pip install gunicorn 명령어 추가
 - django_test_image:2로 select file - Dockerfile로 이미지 만든 후
 - django_container_gunicorn, django_test_image:2, port: host-8080, container-8000으로 컨테이너 만들면 됨
@@ -170,10 +174,10 @@ CMD ["gunicorn", "config.wsgi", "--bind", "0.0.0.0:8000"]
 
 ![img](https://blog.kakaocdn.net/dn/bmCYJw/btqRCVt1byK/Qooh0f2sM6KmcZgP2jK56K/img.png)
 
-- 위처럼.
+- 위처럼.(도커 네트워크 안에서 컨테이너 네임이 도메인이 됨)
 - 포테이너 - containers 들어가서 portainer 빼고 다 지워줌
 - Networks 들어가서 nginx-django로 만들어줌
-- Containers 들어가서 django_container_gunicorn, django_test_image:2로 만들고 port 없는 채로 (user -> nginx -> django로 넘겨줄거기 때문에 장고에서 외부포트 연결해 줄 필요 없음)
+- Containers 들어가서 django_container_gunicorn, django_test_image:2로 만들고 port 없는 채로 (user -> <u>nginx -> django</u>로 네트워크 내부에서 넘겨줄거기 때문에 장고에서 외부포트 연결해 줄 필요 없음)
 
 - 아래 Network 부분에 nginx-django 써주고 Deployment 해줌
 - 이번엔 nginx 컨테이너 만들어줄건데, 설정파일부터 만들어줘야함
@@ -203,7 +207,7 @@ http{
 - 파일질라 깔고 host에 IP주소 넣고, 사용자명 넣고, 비밀번호 넣고 포트 22로 연결하면 됨
 - .. 눌러서 home 들어가서 django_course폴더 만들어줌
 - 이 안에다가 로컬에 있던 파일 nginx.conf 올려줌
-- 이제 nginx 컨테이너 만들어줌(name-nginx, Image:nginx, host,container-port 80, network-nginx-django, Volums-container에 /etc/nginx/nginx.conf 넣고, Volums-host부분에 /home/django_course/nginx.conf 하고 Bind 체크하고 Deploy 해줌)
+- 이제 nginx 컨테이너 만들어줌(name-nginx, Image:nginx, host,container-port 80, network-nginx-django, Volums-container에 /etc/nginx/nginx.conf 넣고, Bind 체크하고 , Volums-host부분에 /home/django_course/nginx.conf  Deploy 해줌)
 - 참고로 위에 volumes에서 컨테이너 안이랑 밖에 있는 host랑(내가 빌린 가상서버) 연결해주는 과정
 - 빌린 IP주소 넣으면 들어가짐
 
