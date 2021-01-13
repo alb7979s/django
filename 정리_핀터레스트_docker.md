@@ -266,7 +266,7 @@ http{
 - volumes가서 세개 추가해주고 container: /data/static/ , volume: static - local(그냥 새로운 경로를 만들어주는거)
 - container: /data/media/, volume: media - local
 - container: (Bind누르고) /etc/nginx/nginx.conf, host: /home/django_course/nginx.conf
-- deploy하기 전에 고쳐줘야 할게 있어!
+- deploy하기 전에 고쳐줘야 할게 있어!(경로로 들어오는 모든 요청 넘겼었는데, 엔진 안에서 스태틱 파일만 앞단에서 처리할 수 있도록 써주는 내용)
 
 ```
 #nginx.conf - server{} 내부에 추가
@@ -287,16 +287,18 @@ location /media/ {
 
 ##### Maria DB 컨테이너를 이용한 DB 분리
 
+- 분리 안해주고 컨테이너 꺼지면 데이터가 사라짐, 따라서 DB분리 필요함(따지고 보면 마리아DB안쓰고 그냥 bind volume 방법 사용해서 sql lite 써도 되는데, 성능이슈로 마리아DB로)
+
 - docker hub에서 mariadb 치면 나옴 거기서 시작법대로 해주면 됨
 - 포테이너 들어가서 Add container로 mariadb 하고 Image에 mariadb:10.5
 - 참고로 Image 이름에 :이거 뒤에는 태그값 넣는거 안적으면 그냥 최신으로 가져옴(권장하진 않는대)
-- Env에서 MYSQL_ROOT_PASSWORD, password 넣어주고 deployment해보면 되는걸 볼 수 있다
+- Env에서 MYSQL_ROOT_PASSWORD, password 넣어주고 deployment해보면 되는걸 볼 수 있다(컨테이너가 어떤 하나의 시스템인데, 그 안에서 환경변수가 저장되는거)
 
 ##### 개발/배포 환경 분리
 
 ![img](https://blog.kakaocdn.net/dn/nRJlp/btqRI80SVTh/AOCgLCuEvtkLTXUuTVNou0/img.png)
 
-- 요런식으로(mariaDB아래 볼륨을 통해서 컨테이너 생애주기와 관련없이 데이터 유지되도록 하겠)
+- 요런식으로(mariaDB아래 볼륨을 통해서 컨테이너 생애주기와 관련없이 데이터 유지되도록 하겠), 데이터 사라지는거 방지하기 위해 마리아DB 내부에 volume
 - 파이참 켜서 config - settings.py 이 설정들 나눠줄거임
 - config에 settings라는 폴더 만들어주고, settings.py 이쪽으로 넘겨줌
 - settings 폴더 안에 local.py, deploy.py 추가(local은 컴퓨터 개발환경, deploy는 배포환경)
@@ -316,7 +318,7 @@ DATABASES ={
         'NAME': 'django',
         'USER': 'django',
         'PASSWORD': 'password123',
-        'HOST': 'mariadb',				
+        'HOST': 'mariadb',						#이 이름을 통해서 통신	
         'PORT': '3306',							#mysql이 사용하는 포트가 3306임
     }
 }
